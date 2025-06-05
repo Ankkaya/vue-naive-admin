@@ -137,6 +137,7 @@ async function handleQuery() {
     if (props.isPagination && props.remote) {
       paginationParams = { pageNo: pagination.page, pageSize: pagination.pageSize }
     }
+    console.warn(props.queryItems)
     const { data } = await props.getData({
       ...props.queryItems,
       ...paginationParams,

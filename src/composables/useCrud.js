@@ -59,6 +59,9 @@ export function useCrud({ name, initForm = {}, doCreate, doDelete, doUpdate, ref
     if (!action && !['edit', 'add'].includes(modalAction.value)) {
       return false
     }
+
+    console.warn(modalForm.value)
+
     await validation()
     const actions = {
       add: {
