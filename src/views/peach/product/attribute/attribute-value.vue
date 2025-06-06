@@ -29,7 +29,7 @@
     >
       <MeQueryItem label="属性值" :label-width="50">
         <n-input
-          v-model:value="queryItems.name"
+          v-model:value="queryItems.value"
           type="text"
           placeholder="请输入属性值"
           clearable
@@ -67,10 +67,10 @@
           <n-input v-model:value="modalForm.value" />
         </n-form-item>
         <n-form-item label="排序">
-          <n-input-number v-model:value="modalForm.sort" class="w-full" placeholder="请输入排序" :default-value="0" />
+          <n-input-number v-model:value="modalForm.sort" class="w-full" placeholder="请输入排序" />
         </n-form-item>
         <n-form-item label="状态">
-          <NSwitch v-model:value="modalForm.status" :checked-value="1" :unchecked-value="0" :default-value="1">
+          <NSwitch v-model:value="modalForm.status" :checked-value="1" :unchecked-value="0">
             <template #checked>
               启用
             </template>
@@ -90,7 +90,7 @@
 <script setup>
 import { NButton, NSwitch, NTag } from 'naive-ui'
 import { h } from 'vue'
-import { MeCrud, MeQueryItem } from '@/components'
+import { MeCrud, MeModal, MeQueryItem } from '@/components'
 import { useCrud } from '@/composables'
 import { formatDateTime } from '@/utils'
 import api from './api'
@@ -115,7 +115,7 @@ const { modalRef, modalFormRef, modalForm, handleAdd, handleDelete, handleEdit }
     doCreate: api.createValue,
     doDelete: api.deleteValue,
     doUpdate: api.updateValue,
-    initForm: { attributeId: route.query.id },
+    initForm: { attributeId: Number(route.params.attributeId), sort: 0, status: 1 },
     refresh: (_, keepCurrentPage) => $table.value?.handleSearch(keepCurrentPage),
   })
 
@@ -143,7 +143,7 @@ const columns = [
         },
       ),
   },
-  { title: '备注', key: 'description' },
+  { title: '备注', key: 'description', render: row => h('span', row.description || '-') },
   {
     title: '创建时间',
     key: 'createDate',
@@ -155,7 +155,7 @@ const columns = [
   {
     title: '操作',
     key: 'actions',
-    width: 100,
+    width: 320,
     align: 'right',
     fixed: 'right',
     hideInExcel: true,
@@ -196,7 +196,7 @@ const columns = [
 async function handleEnable(row) {
   row.loading = true
   try {
-    await api.update({ id: row.id, status: !row.status })
+    await api.update({ id: row.id, status: row.status === 1 ? 0 : 1 })
     row.loading = false
     $message.success('操作成功')
     $table.value?.handleSearch()

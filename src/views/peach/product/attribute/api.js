@@ -11,11 +11,12 @@ import { request } from '@/utils'
 export default {
   create: data => request.post('/attributes', data),
   read: (params = {}) => request.get('/attributes', { params }),
+  readAll: (params = {}) => request.get('/attributes/list', { params }),
   update: data => request.patch(`/attributes/${data.id}`, data),
   delete: id => request.delete(`/attributes/${id}`),
 
   createValue: data => request.post('/attribute-values', data),
   readValue: (params = {}) => request.get('/attribute-values', { params }),
-  updateValue: data => request.patch(`/attributes/${data.id}`, data),
-  deleteValue: id => request.delete(`/attributes/${id}`),
+  updateValue: data => request.patch(`/attribute-values/${data.id}`, data),
+  deleteValue: id => request.delete(`/attribute-values/${id}`),
 }

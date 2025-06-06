@@ -1,7 +1,11 @@
 <template>
   <CommonPage>
     <template #action>
-      <NButton type="primary" @click="handleAdd()">
+      <NButton
+        type="primary" @click="router.push({
+          path: '/product/detail/-1',
+        })"
+      >
         <i class="i-material-symbols:add mr-4 text-18" />
         新增商品
       </NButton>
@@ -14,22 +18,18 @@
       :columns="columns"
       :get-data="api.read"
     >
-      <MeQueryItem label="用户名" :label-width="50">
+      <MeQueryItem label="商品名称" :label-width="70">
         <n-input
-          v-model:value="queryItems.username"
+          v-model:value="queryItems.name"
           type="text"
-          placeholder="请输入用户名"
+          placeholder="请输入商品名称"
           clearable
         />
       </MeQueryItem>
 
-      <MeQueryItem label="性别" :label-width="50">
-        <n-select v-model:value="queryItems.gender" clearable :options="genders" />
-      </MeQueryItem>
-
-      <MeQueryItem label="状态" :label-width="50">
+      <MeQueryItem label="状态" :label-width="40">
         <n-select
-          v-model:value="queryItems.enable"
+          v-model:value="queryItems.status"
           clearable
           :options="[
             { label: '启用', value: 1 },
@@ -38,66 +38,6 @@
         />
       </MeQueryItem>
     </MeCrud>
-
-    <MeModal ref="modalRef" width="820px">
-      <n-form
-        ref="modalFormRef"
-        label-placement="left"
-        label-align="left"
-        :label-width="80"
-        :model="modalForm"
-        :disabled="modalAction === 'view'"
-      >
-        <n-form-item
-          label="商品名称"
-          path="name"
-          :rule="{
-            required: true,
-            message: '请输入商品名称',
-            trigger: ['input', 'blur'],
-          }"
-        >
-          <n-input v-model:value="modalForm.name" clearable />
-        </n-form-item>
-        <n-form-item label="商品图片">
-          <n-upload :default-file-list="state.previewFileList" list-type="image-card" @preview="handlePreview" />
-        </n-form-item>
-        <n-form-item
-          label="销售价格" path="price" :rule="{
-            required: true,
-            message: '请输入销售价格',
-            trigger: ['input', 'blur'],
-          }"
-        >
-          <n-input-number v-model:value="modalForm.price" class="w-full" :precision="2" placeholder="请输入销售价格">
-            <template #prefix>
-              ￥
-            </template>
-          </n-input-number>
-        </n-form-item>
-        <n-form-item
-          label="成本价格" path="costPrice" :rule="{
-            required: true,
-            message: '请输入成本价格',
-            trigger: ['input', 'blur'],
-          }"
-        >
-          <n-input-number v-model:value="modalForm.costPrice" class="w-full" :precision="2" placeholder="请输入成本价格">
-            <template #prefix>
-              ￥
-            </template>
-          </n-input-number>
-        </n-form-item>
-        <n-form-item
-          label="库存"
-        >
-          <n-input v-model:value="modalForm.stock" disabled class="w-full" placeholder="库存根据商品规格自动计算" />
-        </n-form-item>
-      </n-form>
-      <n-alert v-if="modalAction === 'add'" type="warning" closable>
-        新创建商品默认状态为启用
-      </n-alert>
-    </MeModal>
 
     <n-modal v-model:show="state.showModal" preset="card">
       <img :src="state.previewImage" class="w-full">
@@ -115,42 +55,29 @@ import api from './api'
 
 defineOptions({ name: 'ProductList' })
 
+const router = useRouter()
+
 const $table = ref(null)
 /** QueryBar筛选参数（可选） */
 const queryItems = ref({})
 
 const state = reactive({
   showModal: false,
-  previewImage: '',
-  previewFileList: [],
 })
 
 onMounted(() => {
   $table.value?.handleSearch()
 })
 
-const genders = [
-  { label: '男', value: 1 },
-  { label: '女', value: 2 },
-]
-
-function handlePreview(file) {
-  state.showModal = true
-  state.previewImage = file.url
-}
-
 const {
-  modalRef,
-  modalFormRef,
   modalForm,
   modalAction,
-  handleAdd,
   handleDelete,
   handleOpen,
   handleSave,
 } = useCrud({
   name: '商品',
-  initForm: { enable: true },
+  initForm: { status: 1, price: 0, costPrice: 0 },
   doCreate: api.create,
   doDelete: api.delete,
   doUpdate: api.update,
@@ -195,11 +122,6 @@ const columns = [
     width: 150,
   },
   {
-    title: '创建时间',
-    key: 'createTime',
-    width: 180,
-  },
-  {
     title: '状态',
     key: 'enable',
     width: 120,
@@ -218,6 +140,18 @@ const columns = [
           unchecked: () => '停用',
         },
       ),
+  },
+  {
+    title: '创建时间',
+    key: 'createTime',
+    width: 180,
+    render: row => h('span', formatDateTime(row.createTime)),
+  },
+  {
+    title: '更新时间',
+    key: 'updateTime',
+    width: 180,
+    render: row => h('span', formatDateTime(row.updateTime)),
   },
   {
     title: '操作',

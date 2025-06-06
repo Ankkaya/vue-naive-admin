@@ -134,6 +134,9 @@ const columns = [
   { title: '创建时间', key: 'createTime', width: 180, render(row) {
     return h('span', formatDateTime(row.createTime))
   } },
+  { title: '更新时间', key: 'updateTime', width: 180, render(row) {
+    return h('span', formatDateTime(row.updateTime))
+  } },
   {
     title: '操作',
     key: 'actions',
@@ -162,7 +165,12 @@ const columns = [
             size: 'small',
             type: 'primary',
             style: 'margin-left: 12px;',
-            onClick: () => handleEdit(row),
+            onClick: () => {
+              delete row.attributeValues
+              delete row.createTime
+              delete row.updateTime
+              handleEdit(row)
+            },
           },
           {
             default: () => '编辑',
@@ -191,14 +199,14 @@ const columns = [
 async function handleEnable(row) {
   row.loading = true
   try {
-    await api.update({ id: row.id, status: !row.status })
+    await api.update({ id: row.id, status: row.status === 1 ? 0 : 1 })
     row.loading = false
     $message.success('操作成功')
     $table.value?.handleSearch()
   }
   catch (error) {
     console.error(error)
-    row.enableLoading = false
+    row.loading = false
   }
 }
 </script>

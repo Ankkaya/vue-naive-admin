@@ -60,8 +60,6 @@ export function useCrud({ name, initForm = {}, doCreate, doDelete, doUpdate, ref
       return false
     }
 
-    console.warn(modalForm.value)
-
     await validation()
     const actions = {
       add: {
