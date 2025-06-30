@@ -6,44 +6,52 @@
         保存
       </NButton>
     </template>
-    <n-alert class="mb-20" v-if="state.modalAction === 'add'" type="warning" closable>
+    <n-alert v-if="state.modalAction === 'add'" class="mb-20" type="warning" closable>
       新创建商品默认状态为启用
     </n-alert>
-    <n-form ref="modalFormRef" label-placement="left" label-align="left" :label-width="80" :model="state.modalForm"
-      :disabled="state.modalAction === 'view'">
-      <n-form-item label="商品名称" path="name" :rule="{
-        required: true,
-        message: '请输入商品名称',
-        trigger: ['input', 'blur'],
-      }">
+    <n-form
+      ref="modalFormRef" label-placement="left" label-align="left" :label-width="80" :model="state.modalForm"
+      :disabled="state.modalAction === 'view'"
+    >
+      <n-form-item
+        label="商品名称" path="name" :rule="{
+          required: true,
+          message: '请输入商品名称',
+          trigger: ['input', 'blur'],
+        }"
+      >
         <NInput v-model:value="state.modalForm.name" clearable />
       </n-form-item>
       <n-form-item label="商品图片">
         <n-upload :default-file-list="state.previewFileList" list-type="image-card" @preview="handlePreview" />
       </n-form-item>
-      <n-form-item label="销售价格" path="price" :rule="{
-        type: 'number',
-        required: true,
-        message: '请输入销售价格',
-        trigger: ['change', 'blur'],
-      }">
-        <n-input-number v-model:value="state.modalForm.price" class="w-full" :precision="2" placeholder="请输入销售价格">
+      <n-form-item
+        label="销售价格" path="price" :rule="{
+          type: 'number',
+          required: true,
+          message: '请输入销售价格',
+          trigger: ['change', 'blur'],
+        }"
+      >
+        <NInputNumber v-model:value="state.modalForm.price" class="w-full" :precision="2" placeholder="请输入销售价格">
           <template #prefix>
             ￥
           </template>
-        </n-input-number>
+        </NInputNumber>
       </n-form-item>
-      <n-form-item label="成本价格" path="costPrice" :rule="{
-        type: 'number',
-        required: true,
-        message: '请输入成本价格',
-        trigger: ['change', 'blur'],
-      }">
-        <n-input-number v-model:value="state.modalForm.costPrice" class="w-full" :precision="2" placeholder="请输入成本价格">
+      <n-form-item
+        label="成本价格" path="costPrice" :rule="{
+          type: 'number',
+          required: true,
+          message: '请输入成本价格',
+          trigger: ['change', 'blur'],
+        }"
+      >
+        <NInputNumber v-model:value="state.modalForm.costPrice" class="w-full" :precision="2" placeholder="请输入成本价格">
           <template #prefix>
             ￥
           </template>
-        </n-input-number>
+        </NInputNumber>
       </n-form-item>
       <n-form-item label="状态">
         <NSwitch v-model:value="state.modalForm.status" :checked-value="1" :unchecked-value="0">
@@ -67,19 +75,33 @@
           </n-space>
         </n-radio-group>
       </n-form-item>
+      <n-button v-if="state.modalForm.specType === 2" type="primary" class="ml-80" @click="handleAddAttribute">
+        添加规格
+      </n-button>
+
       <div v-if="state.modalForm.specType === 2" class="ml-80">
         <n-space>
-          <n-tag v-for="item in state.attributeOptions" :key="item.id" :checked="item.checked" checkable size="large"
-            @update:checked="(value) => handleAttributeChecked(value, item)">
+          <n-tag
+            v-for="item in state.attributeOptions" :key="item.id" :checked="item.checked" checkable size="large"
+            @update:checked="(value) => handleAttributeChecked(value, item)"
+          >
             {{ item.name }}
           </n-tag>
         </n-space>
       </div>
-      <n-data-table :class="state.modalForm.specType === 2 ? 'mt-20' : ''"
-        v-if="state.modalForm.specType === 1 || (state.modalForm.specType === 2 && state.columns.length > 0)" bordered
-        :columns="state.columns" :data="state.specList" />
+      <n-data-table
+        v-if="state.modalForm.specType === 1 || (state.modalForm.specType === 2 && state.columns.length > 0)"
+        :class="state.modalForm.specType === 2 ? 'mt-20' : ''" bordered
+        :columns="state.columns" :data="state.specList"
+      />
     </n-form>
-    <n-modal v-model:show="state.showModal" preset="card" />
+    <n-modal v-model:show="state.showModal" preset="card">
+      <img :src="state.previewImage" class="w-full">
+    </n-modal>
+
+    <n-modal v-model:show="state.showAttributeModal" preset="card" style="width: 800px;" @close="state.showAttributeModal = false">
+      <n-data-table :columns="state.attributeColumns" :data="state.attributeData" :row-key="state.rowKey" @update:checked-row-keys="handleCheckedRowKeys" />
+    </n-modal>
   </CommonPage>
 </template>
 
@@ -96,13 +118,41 @@ const modalFormRef = ref(null)
 const state = reactive({
   previewImage: '',
   previewFileList: [],
+  attributeData: [],
   attributeOptions: [],
+  attributeColumns: [{
+    type: 'selection',
+  }, {
+    title: '规格名称',
+    key: 'name',
+  }, {
+    title: '规格值',
+    key: 'attributeValues',
+  }],
+  pagination: {
+    page: 1,
+    pageSize: 100,
+    showSizePicker: true,
+    pageSizes: [10, 20, 50, 100],
+    showQuickJumper: true,
+    showTotal: true,
+    onChange: (page) => {
+      state.pagination.page = page
+    },
+    onUpdatePageSize(pageSize) {
+      state.pagination.pageSize = pageSize
+      state.pagination.page = 1
+    },
+  },
+  rowKey: row => row.attributeValueId,
+  checkedRowKeys: [],
   modalForm: {
     specType: 2,
-    status: 1
+    status: 1,
   },
   modalAction: 'add',
   showModal: false,
+  showAttributeModal: false,
   specList: [],
   columns: [],
 })
@@ -163,7 +213,6 @@ function handleAttributeChecked(value, item) {
 
   // 根据 checkedAttributes 中每个属性的 attributeValues 列表，交叉生成 specList
   state.specList = generateSkuCombinations2(checkedAttributes)
-  console.log(state.specList)
 }
 
 function handleSpecTypeChange(value) {
@@ -199,11 +248,39 @@ function handleSpecTypeChange(value) {
   }
 }
 
+function handleCheckedRowKeys(value) {
+  state.checkedRowKeys = value
+}
+
+function handleAddAttribute() {
+  state.showAttributeModal = true
+  getAttributeData()
+}
+
+async function getAttributeData() {
+  const { data } = await attributeApi.read({ status: 1, valueStatus: 1, page: state.pagination.page, limit: state.pagination.pageSize })
+
+  state.attributeData = data.pageData
+  const result = []
+  data.pageData.reduce((acc, item) => {
+    const list = item.attributeValues.map(sitem => ({
+      id: item.id,
+      name: item.name,
+      attributeValues: sitem.value,
+      attributeValueId: sitem.id,
+    }))
+    acc.push(...list)
+    return acc
+  }, result)
+  state.attributeData = result
+}
+
 onMounted(async () => {
-  const { data } = await attributeApi.readAll({ status: 1 })
-  state.attributeOptions = data.map(item => ({
-    ...item,
-    checked: false,
-  }))
+  // await getAttributeData()
+
+  // state.attributeOptions = data.map(item => ({
+  //   ...item,
+  //   checked: false,
+  // }))
 })
 </script>
