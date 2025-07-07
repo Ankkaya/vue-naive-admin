@@ -78,17 +78,6 @@
       <n-button v-if="state.modalForm.specType === 2" type="primary" class="ml-80" @click="handleAddAttribute">
         添加规格
       </n-button>
-
-      <div v-if="state.modalForm.specType === 2" class="ml-80">
-        <n-space>
-          <n-tag
-            v-for="item in state.attributeOptions" :key="item.id" :checked="item.checked" checkable size="large"
-            @update:checked="(value) => handleAttributeChecked(value, item)"
-          >
-            {{ item.name }}
-          </n-tag>
-        </n-space>
-      </div>
       <n-data-table
         v-if="state.modalForm.specType === 1 || (state.modalForm.specType === 2 && state.columns.length > 0)"
         :class="state.modalForm.specType === 2 ? 'mt-20' : ''" bordered
@@ -99,8 +88,13 @@
       <img :src="state.previewImage" class="w-full">
     </n-modal>
 
-    <n-modal v-model:show="state.showAttributeModal" preset="card" style="width: 800px;" @close="state.showAttributeModal = false">
-      <n-data-table :columns="state.attributeColumns" :data="state.attributeData" :row-key="state.rowKey" @update:checked-row-keys="handleCheckedRowKeys" />
+    <n-modal class="w-800"  title="商品规格" v-model:show="state.showAttributeModal" preset="card" @close="state.showAttributeModal = false">
+        <n-data-table v-model:checked-row-keys="state.checkedRowKeys" :max-height="650" :columns="state.attributeColumns" :data="state.attributeData" :row-key="state.rowKey" @update:checked-row-keys="handleCheckedRowKeys" />
+        <template #footer >
+          <div class="flex justify-end">
+            <n-button  @click="state.showAttributeModal = false">关闭</n-button>
+          </div>
+        </template>
     </n-modal>
   </CommonPage>
 </template>
@@ -183,18 +177,19 @@ function generateSkuCombinations2(attributes) {
   return results
 }
 
-function handleAttributeChecked(value, item) {
-  item.checked = value
-  // 从state.attributeOptions中找到checked为true的属性
-  const checkedAttributes = state.attributeOptions.filter(item => item.checked)
+function handleAttributeChecked() {
+  if (state.attributeOptions.length === 0) {
+    state.columns = []
+    state.specList = []
+    return
+  }
 
-  // 根据 checkedAttributes 中 name 设置 表头
-  state.columns = checkedAttributes.map(item => ({
+  state.columns = state.attributeOptions.map(item => ({
     title: item.name,
     key: item.name,
     width: 100,
   }))
-  if (checkedAttributes.length > 0) {
+  if (state.attributeOptions.length > 0) {
     state.columns.push({
       title: '库存',
       key: 'stock',
@@ -211,8 +206,8 @@ function handleAttributeChecked(value, item) {
     })
   }
 
-  // 根据 checkedAttributes 中每个属性的 attributeValues 列表，交叉生成 specList
-  state.specList = generateSkuCombinations2(checkedAttributes)
+  // 根据 state.attributeOptions 中每个属性的 attributeValues 列表，交叉生成 specList
+  state.specList = generateSkuCombinations2(state.attributeOptions)
 }
 
 function handleSpecTypeChange(value) {
@@ -242,14 +237,58 @@ function handleSpecTypeChange(value) {
   else {
     state.columns = []
     state.specList = []
-    state.attributeOptions.forEach((item) => {
-      item.checked = false
-    })
+    state.attributeOptions = []
   }
 }
 
-function handleCheckedRowKeys(value) {
+function handleCheckedRowKeys(value, rows, meta) {
   state.checkedRowKeys = value
+
+  // 判断 meta.action 状态，如果是 checkAll
+  if (meta.action === 'checkAll') {
+    state.attributeOptions = state.rawAttributeData
+  }
+
+  // 如果是 uncheckAll
+  if (meta.action === 'uncheckAll') {
+    state.attributeOptions = []
+  }
+
+  // if is uncheck
+  if(meta.action === 'uncheck') {
+    const index = state.attributeOptions.findIndex(item => item.id === meta.row.id)
+    // find meta.row.attributeValueId in state.attributeOptions[index].attributeValues
+    const attributeValueIndex = state.attributeOptions[index].attributeValues.findIndex(item => item.id === meta.row.attributeValueId)
+    // delete state.attributeOptions[index].attributeValues[attributeValueIndex]
+    state.attributeOptions[index].attributeValues.splice(attributeValueIndex, 1)
+  }
+
+  // if is check
+  if(meta.action === 'check') {
+    const index = state.attributeOptions.findIndex(item => item.id === meta.row.id)
+    // if index > - 1，there is attributeValues in state.attributeOptions[index]
+    if (index > -1) {
+      // push meta.row into state.attributeOptions[index].attributeValues
+      state.attributeOptions[index].attributeValues.push({
+        id: meta.row.attributeValueId,
+        value: meta.row.attributeValues,
+      })
+    } else {
+      state.attributeOptions.push({
+        id: meta.row.id,
+        name: meta.row.name,
+        attributeValues: [{
+          id: meta.row.attributeValueId,
+          value: meta.row.attributeValues,
+        }],
+      })
+    }
+  }
+
+  // traverse state.attributeOptions, delete item.attributeValues if item.attributeValues.length === 0
+  state.attributeOptions = state.attributeOptions.filter(item => item.attributeValues.length > 0)
+
+  handleAttributeChecked()
 }
 
 function handleAddAttribute() {
@@ -259,8 +298,7 @@ function handleAddAttribute() {
 
 async function getAttributeData() {
   const { data } = await attributeApi.read({ status: 1, valueStatus: 1, page: state.pagination.page, limit: state.pagination.pageSize })
-
-  state.attributeData = data.pageData
+  state.rawAttributeData = data.pageData
   const result = []
   data.pageData.reduce((acc, item) => {
     const list = item.attributeValues.map(sitem => ({
@@ -276,11 +314,6 @@ async function getAttributeData() {
 }
 
 onMounted(async () => {
-  // await getAttributeData()
 
-  // state.attributeOptions = data.map(item => ({
-  //   ...item,
-  //   checked: false,
-  // }))
 })
 </script>
